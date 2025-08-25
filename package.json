@@ -6,12 +6,24 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.0"
+    "next": "15.5.0",
+    "@prisma/client": "^5.20.0",
+    "prisma": "^5.20.0",
+    "lucide-react": "^0.456.0",
+    "recharts": "^2.13.3",
+    "react-hook-form": "^7.53.2",
+    "@hookform/resolvers": "^3.9.1",
+    "zod": "^3.23.8",
+    "date-fns": "^4.1.0",
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
     "typescript": "^5",
