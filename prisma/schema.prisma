@@ -6,6 +6,118 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  type        CategoryType
+  color       String       @default("#3B82F6")
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  transactions Transaction[]
+  expenses     Expense[]
+  incomes      Income[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  amount      Decimal         @db.Decimal(10, 2)
+  description String
+  date        DateTime
+  type        TransactionType
+  categoryId  String
+  isPaid      Boolean         @default(true)
+  paidAmount  Decimal?        @db.Decimal(10, 2) // Track partial payments
+  dueDate     DateTime?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Expense {
+  id            String    @id @default(cuid())
+  amount        Decimal   @db.Decimal(10, 2)
+  description   String
+  date          DateTime
+  categoryId    String
+  isPaid        Boolean   @default(true)
+  paidAmount    Decimal?  @db.Decimal(10, 2) // Track partial payments
+  dueDate       DateTime?
+  vendor        String?
+  invoiceNumber String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+model Income {
+  id             String    @id @default(cuid())
+  amount         Decimal   @db.Decimal(10, 2)
+  description    String
+  date           DateTime
+  categoryId     String
+  isReceived     Boolean   @default(true)
+  receivedAmount Decimal?  @db.Decimal(10, 2) // Track partial payments
+  dueDate        DateTime?
+  customer       String?
+  invoiceNumber  String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("incomes")
+}
+
+model Debt {
+  id          String    @id @default(cuid())
+  amount      Decimal   @db.Decimal(10, 2)
+  description String
+  type        DebtType
+  date        DateTime
+  dueDate     DateTime?
+  isPaid      Boolean   @default(false)
+  creditor    String?
+  debtor      String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("debts")
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+  BOTH
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum DebtType {
+  ACCOUNTS_RECEIVABLE
+  ACCOUNTS_PAYABLE
 }

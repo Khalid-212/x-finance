@@ -1,0 +1,88 @@
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { z } from "zod";
+
+const prisma = new PrismaClient();
+
+const debtSchema = z.object({
+  amount: z.number().positive("Amount must be positive"),
+  description: z.string().min(1, "Description is required"),
+  type: z.enum(["ACCOUNTS_RECEIVABLE", "ACCOUNTS_PAYABLE"]),
+  date: z.string().transform((str) => new Date(str)),
+  dueDate: z
+    .string()
+    .transform((str) => new Date(str))
+    .optional(),
+  isPaid: z.boolean().optional(),
+  creditor: z.string().optional(),
+  debtor: z.string().optional(),
+  interestRate: z.number().min(0).max(100).optional(),
+  notes: z.string().optional(),
+});
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type");
+    const isPaid = searchParams.get("isPaid");
+
+    const where: any = {};
+
+    if (type) {
+      where.type = type;
+    }
+
+    if (isPaid !== null) {
+      where.isPaid = isPaid === "true";
+    }
+
+    const debts = await prisma.debt.findMany({
+      where,
+      orderBy: { date: "desc" },
+    });
+
+    return NextResponse.json(debts);
+  } catch (error) {
+    console.error("Error fetching debts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch debts" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const validatedData = debtSchema.parse(body);
+
+    const debt = await prisma.debt.create({
+      data: {
+        amount: validatedData.amount,
+        description: validatedData.description,
+        type: validatedData.type,
+        date: validatedData.date,
+        dueDate: validatedData.dueDate,
+        isPaid: validatedData.isPaid ?? false,
+        creditor: validatedData.creditor,
+        debtor: validatedData.debtor,
+        interestRate: validatedData.interestRate,
+        notes: validatedData.notes,
+      },
+    });
+
+    return NextResponse.json(debt, { status: 201 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Validation error", details: error.errors },
+        { status: 400 }
+      );
+    }
+    console.error("Error creating debt:", error);
+    return NextResponse.json(
+      { error: "Failed to create debt" },
+      { status: 500 }
+    );
+  }
+}
