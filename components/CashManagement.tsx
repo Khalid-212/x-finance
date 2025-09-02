@@ -56,6 +56,7 @@ export default function CashManagement({ onDataChange }: CashManagementProps) {
     balance: "",
     notes: "",
   });
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCashBalances();
@@ -63,12 +64,46 @@ export default function CashManagement({ onDataChange }: CashManagementProps) {
 
   const fetchCashBalances = async () => {
     try {
+      setApiError(null); // Clear any previous errors
       const response = await fetch("/api/cash-balance");
+
+      if (!response.ok) {
+        console.error(`API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 503) {
+          setApiError(
+            "Database connection failed. Please check your database setup."
+          );
+        } else {
+          setApiError(errorData.error || `API error: ${response.status}`);
+        }
+
+        // Set default empty state to prevent .map() errors
+        setCashBalances([]);
+        setTotalCash(0);
+        return;
+      }
+
       const data = await response.json();
-      setCashBalances(data.cashBalances);
-      setTotalCash(data.totalCash);
+
+      // Ensure we always have arrays to prevent .map() errors
+      if (data && data.cashBalances && Array.isArray(data.cashBalances)) {
+        setCashBalances(data.cashBalances);
+        setTotalCash(data.totalCash || 0);
+      } else {
+        console.warn("Invalid data format received:", data);
+        setCashBalances([]);
+        setTotalCash(0);
+      }
     } catch (error) {
       console.error("Error fetching cash balances:", error);
+      setApiError(
+        "Failed to connect to the server. Please check your internet connection."
+      );
+      // Set default empty state to prevent .map() errors
+      setCashBalances([]);
+      setTotalCash(0);
     }
   };
 
@@ -275,61 +310,99 @@ export default function CashManagement({ onDataChange }: CashManagementProps) {
         </CardContent>
       </Card>
 
+      {/* API Error Display */}
+      {apiError && (
+        <Card className="md:col-span-2 lg:col-span-3 border-red-200 bg-red-50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <span className="text-red-600 text-sm font-semibold">!</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-red-800">
+                  Database Connection Error
+                </h3>
+                <p className="text-red-700 mt-1">{apiError}</p>
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm text-red-600">
+                    <strong>Quick Fix:</strong> Run the database setup commands:
+                  </p>
+                  <div className="bg-red-100 p-3 rounded-md">
+                    <code className="text-sm text-red-800">
+                      npm run db:push && npm run db:seed
+                    </code>
+                  </div>
+                  <p className="text-sm text-red-600">
+                    Or use the setup script:{" "}
+                    <code className="bg-red-100 px-2 py-1 rounded">
+                      ./setup-db.sh
+                    </code>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Cash Balance Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {cashBalances.map((balance) => (
-          <Card key={balance.id}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                {getLocationIcon(balance.location)}
-                {balance.location}
-              </CardTitle>
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${getLocationColor(
-                  balance.location
-                )}`}
-              >
-                {balance.location.includes("Cash") ? "Physical" : "Digital"}
-              </span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(balance.balance)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Last updated:{" "}
-                {new Date(balance.lastUpdated).toLocaleDateString()}
-              </p>
-              {balance.notes && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {balance.notes}
+        {Array.isArray(cashBalances) &&
+          cashBalances.map((balance) => (
+            <Card key={balance.id}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  {getLocationIcon(balance.location)}
+                  {balance.location}
+                </CardTitle>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getLocationColor(
+                    balance.location
+                  )}`}
+                >
+                  {balance.location.includes("Cash") ? "Physical" : "Digital"}
+                </span>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(balance.balance)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Last updated:{" "}
+                  {new Date(balance.lastUpdated).toLocaleDateString()}
                 </p>
-              )}
-              <div className="flex items-center space-x-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditDialog(balance)}
-                >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(balance.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                {balance.notes && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {balance.notes}
+                  </p>
+                )}
+                <div className="flex items-center space-x-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditDialog(balance)}
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(balance.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
       </div>
 
-      {cashBalances.length === 0 && (
+      {!apiError && cashBalances.length === 0 && (
         <Card className="md:col-span-2 lg:col-span-3">
           <CardContent className="p-8 text-center">
             <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

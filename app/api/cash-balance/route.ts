@@ -13,37 +13,81 @@ export async function GET() {
       return NextResponse.json(
         {
           error: "Database connection failed",
-          details: "Please check your database configuration",
+          details:
+            "Please check your database configuration and ensure the database is running",
+          suggestion:
+            "If this is a new deployment, you may need to run database migrations and seed the database",
         },
         { status: 503 }
       );
     }
 
-    const cashBalances = await prisma.cashBalance.findMany({
-      orderBy: { location: "asc" },
-    });
+    // Check if the cash_balances table exists and has data
+    try {
+      const cashBalances = await prisma.cashBalance.findMany({
+        orderBy: { location: "asc" },
+      });
 
-    // Calculate total available cash
-    const totalCash = cashBalances.reduce(
-      (sum, balance) => sum + Number(balance.balance),
-      0
-    );
+      // Calculate total available cash
+      const totalCash = cashBalances.reduce(
+        (sum, balance) => sum + Number(balance.balance),
+        0
+      );
 
-    return NextResponse.json({
-      cashBalances,
-      totalCash,
-    });
+      return NextResponse.json({
+        cashBalances,
+        totalCash,
+      });
+    } catch (queryError) {
+      console.error("Database query failed:", queryError);
+
+      // Check if this is a table doesn't exist error
+      if (
+        queryError instanceof Error &&
+        queryError.message.includes("does not exist")
+      ) {
+        return NextResponse.json(
+          {
+            error: "Database table not found",
+            details:
+              "The cash_balances table does not exist. Please run database migrations first.",
+            suggestion:
+              "Run 'npm run db:migrate' or 'npm run db:push' to create the database schema",
+          },
+          { status: 503 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          error: "Database query failed",
+          details:
+            queryError instanceof Error
+              ? queryError.message
+              : "Unknown database error",
+          suggestion:
+            "Please check your database schema and ensure all tables are properly created",
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error("Error fetching cash balances:", error);
+    console.error("Unexpected error in cash balance API:", error);
     return NextResponse.json(
       {
-        error: "Failed to fetch cash balances",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: "Internal server error",
+        details:
+          error instanceof Error ? error.message : "Unknown error occurred",
+        suggestion: "Please check the server logs for more details",
       },
       { status: 500 }
     );
   } finally {
-    await prisma.$disconnect();
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error("Error disconnecting from database:", disconnectError);
+    }
   }
 }
 
