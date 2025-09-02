@@ -34,6 +34,13 @@ interface Transaction {
   isPaid: boolean;
   paidAmount?: number;
   dueDate?: string;
+  paymentMethod?:
+    | "CASH_AT_HAND"
+    | "CBE_BANK"
+    | "ABYSSINIA_BANK"
+    | "TELEBIRR"
+    | "CBE_BIRR"
+    | "OTHER";
   notes?: string;
   category: {
     id: string;
@@ -58,9 +65,21 @@ export default function TransactionsList({
 }: TransactionsListProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [cashBalances, setCashBalances] = useState<Array<{ location: string }>>(
+    []
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    totalCount: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
@@ -70,21 +89,29 @@ export default function TransactionsList({
     isPaid: true,
     paidAmount: "",
     dueDate: "",
+    paymentMethod: "CASH_AT_HAND",
     notes: "",
   });
 
   useEffect(() => {
     fetchTransactions();
     fetchCategories();
-  }, []);
+    fetchCashBalances();
+  }, [pagination.page]);
 
   const fetchTransactions = async () => {
     try {
-      const response = await fetch("/api/transactions");
+      setLoading(true);
+      const response = await fetch(
+        `/api/transactions?page=${pagination.page}&limit=${pagination.limit}`
+      );
       const data = await response.json();
-      setTransactions(data);
+      setTransactions(data.transactions || []);
+      setPagination(data.pagination || pagination);
     } catch (error) {
       console.error("Error fetching transactions:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,6 +122,16 @@ export default function TransactionsList({
       setCategories(data);
     } catch (error) {
       console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchCashBalances = async () => {
+    try {
+      const response = await fetch("/api/cash-balance");
+      const data = await response.json();
+      setCashBalances(data.cashBalances || []);
+    } catch (error) {
+      console.error("Error fetching cash balances:", error);
     }
   };
 
@@ -144,6 +181,7 @@ export default function TransactionsList({
       dueDate: transaction.dueDate
         ? new Date(transaction.dueDate).toISOString().split("T")[0]
         : "",
+      paymentMethod: transaction.paymentMethod || "CASH_AT_HAND",
       notes: transaction.notes || "",
     });
     setIsDialogOpen(true);
@@ -169,12 +207,13 @@ export default function TransactionsList({
     setFormData({
       amount: "",
       description: "",
-      date: "",
+      date: new Date().toISOString().split("T")[0],
       type: "INCOME",
       categoryId: "",
       isPaid: true,
       paidAmount: "",
       dueDate: "",
+      paymentMethod: "CASH_AT_HAND",
       notes: "",
     });
     setEditingTransaction(null);
@@ -289,6 +328,35 @@ export default function TransactionsList({
                           {category.name}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethod">Payment Method</Label>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(
+                      value:
+                        | "CASH_AT_HAND"
+                        | "CBE_BANK"
+                        | "ABYSSINIA_BANK"
+                        | "TELEBIRR"
+                        | "CBE_BIRR"
+                        | "OTHER"
+                    ) => setFormData({ ...formData, paymentMethod: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASH_AT_HAND">Cash at Hand</SelectItem>
+                      <SelectItem value="CBE_BANK">CBE Bank</SelectItem>
+                      <SelectItem value="ABYSSINIA_BANK">
+                        Abyssinia Bank
+                      </SelectItem>
+                      <SelectItem value="TELEBIRR">Telebirr</SelectItem>
+                      <SelectItem value="CBE_BIRR">CBE Birr</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -16,6 +16,7 @@ const transactionSchema = z.object({
     .string()
     .transform((str) => new Date(str))
     .optional(),
+  paymentMethod: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -26,6 +27,9 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
     const where: Prisma.TransactionWhereInput = {};
 
@@ -47,6 +51,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get total count for pagination
+    const totalCount = await prisma.transaction.count({ where });
+
     const transactions = await prisma.transaction.findMany({
       where,
       include: {
@@ -55,9 +62,21 @@ export async function GET(request: NextRequest) {
       orderBy: {
         date: "desc",
       },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json(transactions);
+    return NextResponse.json({
+      transactions,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1,
+      },
+    });
   } catch (error) {
     console.error("Error fetching transactions:", error);
     return NextResponse.json(
@@ -90,6 +109,39 @@ export async function POST(request: NextRequest) {
         category: true,
       },
     });
+
+    // Update cash balance if payment method is specified
+    if (
+      validatedData.paymentMethod &&
+      validatedData.paymentMethod !== "OTHER"
+    ) {
+      // Use the payment method directly as the location
+      const location = validatedData.paymentMethod;
+      const cashBalance = await prisma.cashBalance.findUnique({
+        where: { location },
+      });
+
+      if (cashBalance) {
+        const currentBalance = Number(cashBalance.balance);
+        let newBalance: number;
+
+        if (validatedData.type === "INCOME") {
+          // Income increases the balance
+          newBalance = currentBalance + Number(paidAmount);
+        } else {
+          // Expense decreases the balance
+          newBalance = currentBalance - Number(paidAmount);
+        }
+
+        await prisma.cashBalance.update({
+          where: { id: cashBalance.id },
+          data: {
+            balance: newBalance,
+            lastUpdated: new Date(),
+          },
+        });
+      }
+    }
 
     // If transaction is not fully paid, create a debt record
     if (paidAmount && paidAmount < validatedData.amount) {

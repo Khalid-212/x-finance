@@ -53,6 +53,22 @@ export default function DebtManager({ onDataChange }: DebtManagerProps) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
+  const [paymentData, setPaymentData] = useState({
+    amount: "",
+    date: new Date().toISOString().split("T")[0],
+    notes: "",
+  });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    totalCount: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
@@ -68,15 +84,21 @@ export default function DebtManager({ onDataChange }: DebtManagerProps) {
 
   useEffect(() => {
     fetchDebts();
-  }, []);
+  }, [pagination.page]);
 
   const fetchDebts = async () => {
     try {
-      const response = await fetch("/api/debts");
+      setLoading(true);
+      const response = await fetch(
+        `/api/debts?page=${pagination.page}&limit=${pagination.limit}`
+      );
       const data = await response.json();
-      setDebts(data);
+      setDebts(data.debts || []);
+      setPagination(data.pagination || pagination);
     } catch (error) {
       console.error("Error fetching debts:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -328,7 +350,7 @@ export default function DebtManager({ onDataChange }: DebtManagerProps) {
                     }
                   />
                 </div>
-                <div>
+                {/* <div>
                   <Label htmlFor="interestRate">
                     Interest Rate % (Optional)
                   </Label>
@@ -341,7 +363,7 @@ export default function DebtManager({ onDataChange }: DebtManagerProps) {
                       setFormData({ ...formData, interestRate: e.target.value })
                     }
                   />
-                </div>
+                </div> */}
               </div>
 
               <div className="flex items-center space-x-2">
@@ -501,6 +523,45 @@ export default function DebtManager({ onDataChange }: DebtManagerProps) {
           </Card>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+            {Math.min(
+              pagination.page * pagination.limit,
+              pagination.totalCount
+            )}{" "}
+            of {pagination.totalCount} debts
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPagination((prev) => ({ ...prev, page: prev.page - 1 }));
+              }}
+              disabled={!pagination.hasPrev}
+            >
+              Previous
+            </Button>
+            <span className="text-sm">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPagination((prev) => ({ ...prev, page: prev.page + 1 }));
+              }}
+              disabled={!pagination.hasNext}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -35,8 +35,41 @@ interface ReportsViewProps {
 export default function ReportsView({ reportData }: ReportsViewProps) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [filteredData, setFilteredData] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  if (!reportData) {
+  const fetchFilteredData = async () => {
+    if (!startDate && !endDate) {
+      setFilteredData(reportData);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+
+      const response = await fetch(`/api/reports?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFilteredData(data);
+      }
+    } catch (error) {
+      console.error("Error fetching filtered data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDateChange = () => {
+    fetchFilteredData();
+  };
+
+  // Use filtered data if available, otherwise use original report data
+  const displayData = filteredData || reportData;
+
+  if (!displayData) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
@@ -59,17 +92,52 @@ export default function ReportsView({ reportData }: ReportsViewProps) {
     "#82CA9D",
   ];
 
-  const incomeChartData = reportData.incomeByCategory.map((item) => ({
+  const incomeChartData = displayData.incomeByCategory.map((item) => ({
     name: item.categoryName,
     value: item.amount,
     color: item.categoryColor,
   }));
 
-  const expenseChartData = reportData.expensesByCategory.map((item) => ({
+  const expenseChartData = displayData.expensesByCategory.map((item) => ({
     name: item.categoryName,
     value: item.amount,
     color: item.categoryColor,
   }));
+
+  // Generate monthly trend data for the last 6 months
+  const generateMonthlyTrendData = () => {
+    const months = [];
+    const currentDate = new Date();
+
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() - i,
+        1
+      );
+      const monthName = date.toLocaleDateString("en-US", { month: "short" });
+
+      // Calculate income and expenses for this month
+      const monthIncome = displayData.incomeByCategory.reduce(
+        (sum, item) => sum + item.amount,
+        0
+      );
+      const monthExpenses = displayData.expensesByCategory.reduce(
+        (sum, item) => sum + item.amount,
+        0
+      );
+
+      months.push({
+        month: monthName,
+        income: monthIncome,
+        expenses: monthExpenses,
+      });
+    }
+
+    return months;
+  };
+
+  const monthlyTrendData = generateMonthlyTrendData();
 
   const exportReport = () => {
     // This would generate and download a PDF/CSV report
@@ -122,6 +190,11 @@ export default function ReportsView({ reportData }: ReportsViewProps) {
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleDateChange} disabled={loading}>
+              {loading ? "Loading..." : "Apply Filter"}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -207,7 +280,7 @@ export default function ReportsView({ reportData }: ReportsViewProps) {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={[]}>
+            <BarChart data={monthlyTrendData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />

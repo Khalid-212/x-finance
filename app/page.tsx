@@ -17,6 +17,7 @@ import TransactionsList from "@/components/TransactionsList";
 import CategoriesManager from "@/components/CategoriesManager";
 import DebtManager from "@/components/DebtManager";
 import ReportsView from "@/components/ReportsView";
+import CashManagement from "@/components/CashManagement";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -30,10 +31,12 @@ export default function Home() {
 
   const fetchReportData = async () => {
     try {
+      console.log("🔄 Fetching report data...");
       setLoading(true);
       setError(null);
 
       const response = await fetch("/api/reports");
+      console.log("📡 API Response status:", response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -43,13 +46,19 @@ export default function Home() {
       }
 
       const data = await response.json();
+      console.log("📊 Received data:", data);
       setReportData(data);
     } catch (error) {
-      console.error("Error fetching report data:", error);
+      console.error("❌ Error fetching report data:", error);
       setError(error instanceof Error ? error.message : "Failed to fetch data");
     } finally {
       setLoading(false);
+      console.log("✅ Data fetching completed");
     }
+  };
+
+  const handleDataChange = () => {
+    fetchReportData();
   };
 
   return (
@@ -108,6 +117,10 @@ export default function Home() {
               <CreditCard className="h-4 w-4" />
               Debts
             </TabsTrigger>
+            <TabsTrigger value="cash" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Cash
+            </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
               Reports
@@ -123,15 +136,19 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="transactions" className="space-y-6">
-            <TransactionsList onDataChange={fetchReportData} />
+            <TransactionsList onDataChange={handleDataChange} />
           </TabsContent>
 
           <TabsContent value="categories" className="space-y-6">
-            <CategoriesManager />
+            <CategoriesManager onDataChange={handleDataChange} />
           </TabsContent>
 
           <TabsContent value="debts" className="space-y-6">
-            <DebtManager onDataChange={fetchReportData} />
+            <DebtManager onDataChange={handleDataChange} />
+          </TabsContent>
+
+          <TabsContent value="cash" className="space-y-6">
+            <CashManagement onDataChange={handleDataChange} />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">

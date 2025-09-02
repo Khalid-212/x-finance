@@ -30,7 +30,10 @@ export default function DashboardOverview({
   loading = false,
   error = null,
 }: DashboardOverviewProps) {
+  console.log("🎯 DashboardOverview render:", { reportData, loading, error });
+
   if (loading) {
+    console.log("⏳ Showing loading state");
     return (
       <div className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -140,17 +143,27 @@ export default function DashboardOverview({
     "#82CA9D",
   ];
 
+  console.log("📊 Chart data preparation:", {
+    incomeByCategory: reportData.incomeByCategory,
+    expensesByCategory: reportData.expensesByCategory
+  });
+
   const incomeChartData = reportData.incomeByCategory.map((item) => ({
     name: item.categoryName,
-    value: item.amount,
+    value: Number(item.amount),
     color: item.categoryColor,
   }));
 
   const expenseChartData = reportData.expensesByCategory.map((item) => ({
     name: item.categoryName,
-    value: item.amount,
+    value: Number(item.amount),
     color: item.categoryColor,
   }));
+
+  console.log("🎯 Processed chart data:", {
+    incomeChartData,
+    expenseChartData
+  });
 
   return (
     <div className="space-y-6">
@@ -234,31 +247,44 @@ export default function DashboardOverview({
               Distribution of income across categories
             </CardDescription>
           </CardHeader>
+          <div className="px-6 pb-6">
+            <p className="text-sm text-muted-foreground mb-2">
+              Debug: {incomeChartData.length} items, total: {incomeChartData.reduce((sum, item) => sum + item.value, 0)}
+            </p>
+          </div>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={incomeChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {incomeChartData.map((entry, index: number) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.color || COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
+            {incomeChartData.length > 0 ? (
+              <div style={{ width: '100%', height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={incomeChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {incomeChartData.map((entry, index: number) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color || COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No income data available
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -269,31 +295,44 @@ export default function DashboardOverview({
               Distribution of expenses across categories
             </CardDescription>
           </CardHeader>
+          <div className="px-6 pb-6">
+            <p className="text-sm text-muted-foreground mb-2">
+              Debug: {expenseChartData.length} items, total: {expenseChartData.reduce((sum, item) => sum + item.value, 0)}
+            </p>
+          </div>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={expenseChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {expenseChartData.map((entry, index: number) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.color || COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
+            {expenseChartData.length > 0 ? (
+              <div style={{ width: '100%', height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={expenseChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {expenseChartData.map((entry, index: number) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color || COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No expense data available
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

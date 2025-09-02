@@ -33,7 +33,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get total income (based on received amounts)
+    // Get total income from transactions
+    const totalIncomeTransactions = await prisma.transaction.aggregate({
+      where: {
+        type: "INCOME",
+        date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Get total expenses from transactions
+    const totalExpenseTransactions = await prisma.transaction.aggregate({
+      where: {
+        type: "EXPENSE",
+        date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Get total income (based on received amounts from income model)
     const totalIncome = await prisma.income.aggregate({
       where: {
         date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
@@ -43,7 +65,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get total expenses (based on paid amounts)
+    // Get total expenses (based on paid amounts from expense model)
     const totalExpenses = await prisma.expense.aggregate({
       where: {
         date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
@@ -75,25 +97,27 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get income by category (based on received amounts)
-    const incomeByCategory = await prisma.income.groupBy({
+    // Get income by category from transactions
+    const incomeByCategory = await prisma.transaction.groupBy({
       by: ["categoryId"],
       where: {
+        type: "INCOME",
         date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       },
       _sum: {
-        receivedAmount: true,
+        amount: true,
       },
     });
 
-    // Get expenses by category (based on paid amounts)
-    const expensesByCategory = await prisma.expense.groupBy({
+    // Get expenses by category from transactions
+    const expensesByCategory = await prisma.transaction.groupBy({
       by: ["categoryId"],
       where: {
+        type: "EXPENSE",
         date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       },
       _sum: {
-        paidAmount: true,
+        amount: true,
       },
     });
 
@@ -106,7 +130,7 @@ export async function GET(request: NextRequest) {
       return {
         categoryName: category?.name || "Unknown",
         categoryColor: category?.color || "#3B82F6",
-        amount: item._sum.receivedAmount || 0,
+        amount: item._sum.amount || 0,
       };
     });
 
@@ -115,23 +139,29 @@ export async function GET(request: NextRequest) {
       return {
         categoryName: category?.name || "Unknown",
         categoryColor: category?.color || "#3B82F6",
-        amount: item._sum.paidAmount || 0,
+        amount: item._sum.amount || 0,
       };
     });
 
-    // Calculate net profit
-    const incomeAmount = Number(totalIncome._sum.receivedAmount) || 0;
-    const expenseAmount = Number(totalExpenses._sum.paidAmount) || 0;
+    // Calculate net profit using transaction amounts for more accurate data
+    const incomeAmount = Number(totalIncomeTransactions._sum.amount) || 0;
+    const expenseAmount = Number(totalExpenseTransactions._sum.amount) || 0;
     const netProfit = incomeAmount - expenseAmount;
 
     const report = {
       totalIncome: incomeAmount,
       totalExpenses: expenseAmount,
       netProfit,
-      totalAccountsReceivable: totalAccountsReceivable._sum.amount || 0,
-      totalAccountsPayable: totalAccountsPayable._sum.amount || 0,
-      incomeByCategory: incomeByCategoryWithNames,
-      expensesByCategory: expensesByCategoryWithNames,
+      totalAccountsReceivable: Number(totalAccountsReceivable._sum.amount) || 0,
+      totalAccountsPayable: Number(totalAccountsPayable._sum.amount) || 0,
+      incomeByCategory: incomeByCategoryWithNames.map((item) => ({
+        ...item,
+        amount: Number(item.amount),
+      })),
+      expensesByCategory: expensesByCategoryWithNames.map((item) => ({
+        ...item,
+        amount: Number(item.amount),
+      })),
       period: {
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,

@@ -28,18 +28,19 @@ model Category {
 }
 
 model Transaction {
-  id          String          @id @default(cuid())
-  amount      Decimal         @db.Decimal(10, 2)
-  description String
-  date        DateTime
-  type        TransactionType
-  categoryId  String
-  isPaid      Boolean         @default(true)
-  paidAmount  Decimal?        @db.Decimal(10, 2) // Track partial payments
-  dueDate     DateTime?
-  notes       String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id            String          @id @default(cuid())
+  amount        Decimal         @db.Decimal(10, 2)
+  description   String
+  date          DateTime
+  type          TransactionType
+  categoryId    String
+  isPaid        Boolean         @default(true)
+  paidAmount    Decimal?        @db.Decimal(10, 2) // Track partial payments
+  dueDate       DateTime?
+  paymentMethod String? // Track how payment was made
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   // Relations
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -58,6 +59,7 @@ model Expense {
   dueDate       DateTime?
   vendor        String?
   invoiceNumber String?
+  paymentMethod String? // Track how payment was made
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -79,6 +81,7 @@ model Income {
   dueDate        DateTime?
   customer       String?
   invoiceNumber  String?
+  paymentMethod  String? // Track how payment was received
   notes          String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -90,20 +93,34 @@ model Income {
 }
 
 model Debt {
-  id          String    @id @default(cuid())
-  amount      Decimal   @db.Decimal(10, 2)
-  description String
-  type        DebtType
-  date        DateTime
-  dueDate     DateTime?
-  isPaid      Boolean   @default(false)
-  creditor    String?
-  debtor      String?
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  amount        Decimal   @db.Decimal(10, 2)
+  description   String
+  type          DebtType
+  date          DateTime
+  dueDate       DateTime?
+  isPaid        Boolean   @default(false)
+  creditor      String?
+  debtor        String?
+  paymentMethod String? // Track how debt was created/paid
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@map("debts")
+}
+
+// Cash Management Model
+model CashBalance {
+  id          String   @id @default(cuid())
+  location    String   @unique // e.g., "Cash at Hand", "CBE Bank", "Abyssinia Bank"
+  balance     Decimal  @default(0) @db.Decimal(10, 2)
+  lastUpdated DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cash_balances")
 }
 
 enum CategoryType {

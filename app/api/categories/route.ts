@@ -13,6 +13,20 @@ const categorySchema = z.object({
 
 export async function GET() {
   try {
+    // Test database connection first
+    try {
+      await prisma.$connect();
+    } catch (dbError) {
+      console.error("Database connection failed:", dbError);
+      return NextResponse.json(
+        {
+          error: "Database connection failed",
+          details: "Please check your database configuration",
+        },
+        { status: 503 }
+      );
+    }
+
     const categories = await prisma.category.findMany({
       orderBy: { name: "asc" },
     });
@@ -20,14 +34,33 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json(
-      { error: "Failed to fetch categories" },
+      { 
+        error: "Failed to fetch categories",
+        details: error instanceof Error ? error.message : "Unknown error"
+      },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Test database connection first
+    try {
+      await prisma.$connect();
+    } catch (dbError) {
+      console.error("Database connection failed:", dbError);
+      return NextResponse.json(
+        {
+          error: "Database connection failed",
+          details: "Please check your database configuration",
+        },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = categorySchema.parse(body);
 
@@ -61,8 +94,13 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating category:", error);
     return NextResponse.json(
-      { error: "Failed to create category" },
+      { 
+        error: "Failed to create category",
+        details: error instanceof Error ? error.message : "Unknown error"
+      },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

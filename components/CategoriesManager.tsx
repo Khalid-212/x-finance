@@ -31,7 +31,13 @@ interface Category {
   description?: string;
 }
 
-export default function CategoriesManager() {
+interface CategoriesManagerProps {
+  onDataChange: () => void;
+}
+
+export default function CategoriesManager({
+  onDataChange,
+}: CategoriesManagerProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
