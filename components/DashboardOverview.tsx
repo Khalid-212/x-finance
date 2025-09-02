@@ -12,27 +12,15 @@ import {
   TrendingDown,
   DollarSign,
   CreditCard,
-  Receipt,
-  AlertCircle,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { ReportData } from "@/lib/types";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
 interface DashboardOverviewProps {
-  reportData: any;
+  reportData: ReportData | null;
   loading?: boolean;
   error?: string | null;
 }
@@ -152,13 +140,13 @@ export default function DashboardOverview({
     "#82CA9D",
   ];
 
-  const incomeChartData = reportData.incomeByCategory.map((item: any) => ({
+  const incomeChartData = reportData.incomeByCategory.map((item) => ({
     name: item.categoryName,
     value: item.amount,
     color: item.categoryColor,
   }));
 
-  const expenseChartData = reportData.expensesByCategory.map((item: any) => ({
+  const expenseChartData = reportData.expensesByCategory.map((item) => ({
     name: item.categoryName,
     value: item.amount,
     color: item.categoryColor,
@@ -261,14 +249,14 @@ export default function DashboardOverview({
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {incomeChartData.map((entry: any, index: number) => (
+                  {incomeChartData.map((entry, index: number) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={entry.color || COLORS[index % COLORS.length]}
                     />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -296,14 +284,14 @@ export default function DashboardOverview({
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {expenseChartData.map((entry: any, index: number) => (
+                  {expenseChartData.map((entry, index: number) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={entry.color || COLORS[index % COLORS.length]}
                     />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>

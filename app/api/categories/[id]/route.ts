@@ -13,9 +13,10 @@ const categoryUpdateSchema = z.object({
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const validatedData = categoryUpdateSchema.parse(body);
 
@@ -23,7 +24,7 @@ export async function PUT(
       const existingCategory = await prisma.category.findFirst({
         where: {
           name: validatedData.name,
-          id: { not: params.id },
+          id: { not: id },
         },
       });
 
@@ -36,7 +37,7 @@ export async function PUT(
     }
 
     const category = await prisma.category.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     });
 
@@ -58,20 +59,21 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check if category is being used by any transactions
     const transactionsCount = await prisma.transaction.count({
-      where: { categoryId: params.id },
+      where: { categoryId: id },
     });
 
     const expensesCount = await prisma.expense.count({
-      where: { categoryId: params.id },
+      where: { categoryId: id },
     });
 
     const incomesCount = await prisma.income.count({
-      where: { categoryId: params.id },
+      where: { categoryId: id },
     });
 
     if (transactionsCount > 0 || expensesCount > 0 || incomesCount > 0) {
@@ -82,7 +84,7 @@ export async function DELETE(
     }
 
     await prisma.category.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Category deleted successfully" });

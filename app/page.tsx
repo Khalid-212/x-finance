@@ -2,24 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
-  DollarSign,
   TrendingUp,
   TrendingDown,
   CreditCard,
   Receipt,
   AlertCircle,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import { ReportData } from "@/lib/types";
 import DashboardOverview from "@/components/DashboardOverview";
 import TransactionsList from "@/components/TransactionsList";

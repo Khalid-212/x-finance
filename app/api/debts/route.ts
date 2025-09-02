@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const prisma = new PrismaClient();
@@ -16,7 +16,6 @@ const debtSchema = z.object({
   isPaid: z.boolean().optional(),
   creditor: z.string().optional(),
   debtor: z.string().optional(),
-  interestRate: z.number().min(0).max(100).optional(),
   notes: z.string().optional(),
 });
 
@@ -26,10 +25,10 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const isPaid = searchParams.get("isPaid");
 
-    const where: any = {};
+    const where: Prisma.DebtWhereInput = {};
 
     if (type) {
-      where.type = type;
+      where.type = type as "ACCOUNTS_RECEIVABLE" | "ACCOUNTS_PAYABLE";
     }
 
     if (isPaid !== null) {
@@ -66,7 +65,6 @@ export async function POST(request: NextRequest) {
         isPaid: validatedData.isPaid ?? false,
         creditor: validatedData.creditor,
         debtor: validatedData.debtor,
-        interestRate: validatedData.interestRate,
         notes: validatedData.notes,
       },
     });

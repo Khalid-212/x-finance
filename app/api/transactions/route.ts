@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const prisma = new PrismaClient();
@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    const where: any = {};
+    const where: Prisma.TransactionWhereInput = {};
 
     if (type) {
-      where.type = type;
+      where.type = type as "INCOME" | "EXPENSE";
     }
 
     if (categoryId) {

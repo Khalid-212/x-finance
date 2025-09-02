@@ -19,20 +19,20 @@ const debtUpdateSchema = z.object({
   isPaid: z.boolean().optional(),
   creditor: z.string().optional(),
   debtor: z.string().optional(),
-  interestRate: z.number().min(0).max(100).optional(),
   notes: z.string().optional(),
 });
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const validatedData = debtUpdateSchema.parse(body);
 
     const debt = await prisma.debt.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     });
 
@@ -54,11 +54,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await prisma.debt.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Debt deleted successfully" });

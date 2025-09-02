@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -187,12 +181,6 @@ export default function DebtManager({ onDataChange }: DebtManagerProps) {
     ) : (
       <ArrowDownRight className="h-4 w-4" />
     );
-  };
-
-  const getTypeColor = (type: string) => {
-    return type === "ACCOUNTS_RECEIVABLE"
-      ? "text-green-600 bg-green-100"
-      : "text-red-600 bg-red-100";
   };
 
   const getTypeLabel = (type: string) => {
